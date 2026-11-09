@@ -93,16 +93,19 @@ struct BatterySettingsTests {
         let settings = BatterySettings(defaults: freshDefaults())
         #expect(settings.swapSides == false)
         #expect(settings.preferredKeyboard == nil)
+        #expect(settings.compactMenuBar == false)
     }
 
     @Test func persistsAcrossInstances() {
         let defaults = freshDefaults()
         let first = BatterySettings(defaults: defaults)
         first.swapSides = true
+        first.compactMenuBar = true
         first.preferredKeyboard = KeyboardReference(id: KeyboardID(rawValue: "abc"), name: "Forager")
 
         let second = BatterySettings(defaults: defaults)
         #expect(second.swapSides)
+        #expect(second.compactMenuBar)
         #expect(second.preferredKeyboard == KeyboardReference(id: KeyboardID(rawValue: "abc"), name: "Forager"))
 
         second.preferredKeyboard = nil

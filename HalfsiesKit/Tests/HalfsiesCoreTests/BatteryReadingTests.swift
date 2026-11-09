@@ -34,6 +34,13 @@ struct BatteryLevelTests {
         #expect(BatteryLevel.percent(86).label == "86%")
         #expect(BatteryLevel.disconnected.label == "-")
     }
+
+    @Test func lowAtOrBelowTwentyPercent() {
+        #expect(BatteryLevel.percent(1).isLow)
+        #expect(BatteryLevel.percent(20).isLow)
+        #expect(!BatteryLevel.percent(21).isLow)
+        #expect(!BatteryLevel.disconnected.isLow)
+    }
 }
 
 @Suite("PartRole identification")

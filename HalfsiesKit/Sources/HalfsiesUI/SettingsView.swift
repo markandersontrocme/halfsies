@@ -28,6 +28,14 @@ public struct SettingsView: View {
             }
 
             Section {
+                Toggle("Compact menu bar", isOn: $settings.compactMenuBar)
+            } footer: {
+                Text("Shows only the split ring. Click it to see the percentages.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Picker("Keyboard", selection: $settings.preferredKeyboard) {
                     Text("Automatic").tag(KeyboardReference?.none)
                     ForEach(monitor.choices) { choice in

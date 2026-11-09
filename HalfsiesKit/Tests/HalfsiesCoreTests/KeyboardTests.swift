@@ -66,6 +66,19 @@ struct SidesTests {
         #expect(SplitBattery(left: .percent(86), right: .disconnected).menuBarText == "86% -")
         #expect(SplitBattery(left: .percent(86), right: nil).menuBarText == "86% -")
     }
+
+    @Test func lowWhenEitherSideIsLow() {
+        #expect(SplitBattery(left: .percent(86), right: .percent(12)).isLow)
+        #expect(SplitBattery(left: .percent(12), right: nil).isLow)
+        #expect(!SplitBattery(left: .percent(86), right: .disconnected).isLow)
+        #expect(!SplitBattery(left: nil, right: nil).isLow)
+    }
+
+    @Test func accessibilityDescription() {
+        #expect(SplitBattery(left: .percent(86), right: .percent(39)).accessibilityDescription == "Left 86%, right 39%")
+        #expect(SplitBattery(left: .percent(86), right: .disconnected).accessibilityDescription == "Left 86%, right asleep")
+        #expect(SplitBattery(left: nil, right: .percent(39)).accessibilityDescription == "Left not reported, right 39%")
+    }
 }
 
 @Suite("Keyboard selection")

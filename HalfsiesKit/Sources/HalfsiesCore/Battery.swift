@@ -10,6 +10,14 @@ public enum BatteryLevel: Hashable, Sendable {
         self = rawValue == 0 ? .disconnected : .percent(min(Int(rawValue), 100))
     }
 
+    /// At or below this percentage a part is shown as low.
+    public static let lowThreshold = 20
+
+    /// Whether the part needs charging soon. A disconnected part is never low.
+    public var isLow: Bool {
+        if case .percent(let value) = self { value <= Self.lowThreshold } else { false }
+    }
+
     /// Short text for the menu bar and panel: "86%" or "-".
     public var label: String {
         switch self {
@@ -119,5 +127,23 @@ public struct SplitBattery: Hashable, Sendable {
     /// Menu bar text, left then right: "86% 39%", with "-" for a missing or disconnected side.
     public var menuBarText: String {
         "\(left?.label ?? "-") \(right?.label ?? "-")"
+    }
+
+    /// Whether either side needs charging soon.
+    public var isLow: Bool {
+        left?.isLow == true || right?.isLow == true
+    }
+
+    /// Spoken description for VoiceOver: "Left 86%, right asleep".
+    public var accessibilityDescription: String {
+        "Left \(Self.spoken(left)), right \(Self.spoken(right))"
+    }
+
+    private static func spoken(_ level: BatteryLevel?) -> String {
+        switch level {
+        case .percent(let value): "\(value)%"
+        case .disconnected: "asleep"
+        case nil: "not reported"
+        }
     }
 }
