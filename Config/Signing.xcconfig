@@ -1,0 +1,14 @@
+// Default: ad-hoc signing, which needs no Apple account.
+// macOS ties the Bluetooth permission to the code signature, and an ad-hoc signature changes on every build,
+// so each rebuild asks for Bluetooth permission again.
+// To keep the permission across rebuilds, sign in to Xcode with a free Apple ID and create Config/Local.xcconfig
+// (gitignored) containing:
+//
+//   DEVELOPMENT_TEAM = <your team ID>
+//   CODE_SIGN_IDENTITY = Apple Development
+
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"
