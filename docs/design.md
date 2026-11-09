@@ -67,7 +67,9 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
 
 - The core concept is a connected keyboard, with battery as one feature of it.
 - Features are compile-time Swift modules registered in the app's composition root, not runtime plugins.
-- The layer display is the confirmed next feature; how to get layer state from ZMK is being researched in `research/04-layer-display.md`.
+- The layer display is the confirmed next feature.
+  Stock ZMK never sends layer state to the host, so it needs a firmware module on the central half.
+  The leading option is a raw HID report on vendor usage page 0xFF60, read with `IOHIDManager`; see `research/04-layer-display.md`.
 
 ## Development workflow
 

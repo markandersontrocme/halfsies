@@ -9,6 +9,7 @@ This page combines three detailed reports; each claim is cited in the report it 
 | [01-zmk-and-macos-ble.md](01-zmk-and-macos-ble.md) | How ZMK exposes split battery, what macOS and CoreBluetooth allow, ZMK Studio RPC |
 | [02-prior-art.md](02-prior-art.md) | About 20 existing tools on macOS, Windows, Linux, and Python, analysed at the source level |
 | [03-language-build-publish.md](03-language-build-publish.md) | Language, project layout, build toolchain, signing, notarization, distribution, CI |
+| [04-layer-display.md](04-layer-display.md) | Ways a host app can learn the active ZMK layer, for the future layer display |
 
 ## Key findings
 
