@@ -7,11 +7,13 @@ import SwiftUI
 /// Composition root: builds the feature objects and owns app-level windows.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let monitor = BatteryMonitor(transport: BLEKeyboardTransport(), settings: BatterySettings())
+    private let monitor = BatteryMonitor(transport: BLEKeyboardTransport(), settings: BatterySettings())
     private let loginItem = LoginItem()
+    private var menuBar: MenuBarController?
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        menuBar = MenuBarController(monitor: monitor, openSettings: showSettings, quit: { NSApp.terminate(nil) })
         Task { await monitor.run() }
     }
 

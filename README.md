@@ -3,8 +3,10 @@
 Split keyboard in your Mac menu bar.
 
 macOS shows only one battery level for a Bluetooth keyboard, which for a ZMK split is the half your Mac connects to.
-Halfsies shows both halves, left then right, for example `86% 39%`.
-A half that is asleep or out of range shows `-`.
+Halfsies shows both halves, left then right, as a split ring followed by the percentages, for example `86% 39%`.
+Each side of the ring fills from the bottom with that half's battery and turns red at 20% or less.
+A half that is asleep or out of range shows `-` and a dotted side.
+Turn on Compact menu bar in Settings to show only the ring; click it to see the percentages.
 The menu bar item disappears while no keyboard is connected; open Halfsies again to reach its settings.
 
 ## Requirements

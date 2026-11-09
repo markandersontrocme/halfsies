@@ -1,0 +1,33 @@
+{
+  "fill": {
+    "automatic-gradient": "display-p3:0.36863,0.36078,0.90196,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "levels.svg",
+          "name": "Levels"
+        },
+        {
+          "image-name": "track.svg",
+          "name": "Track",
+          "opacity": 0.25
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

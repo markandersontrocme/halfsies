@@ -20,7 +20,9 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
 
 ## Platform and tooling
 
-- Swift 6 with strict concurrency, SwiftUI `MenuBarExtra` in window style, `@Observable`.
+- Swift 6 with strict concurrency, `@Observable`, SwiftUI for all views.
+- The menu bar item is an AppKit `NSStatusItem` that opens a SwiftUI panel in a borderless window.
+  SwiftUI's `MenuBarExtra` is not used because its documented behavior does not cover a colored, non-template label image, which the low-battery state needs.
 - Current macOS only (26 and later).
 - Unsandboxed, no Apple Developer Program, no notarization.
 - Local builds are signed with a free Personal Team development certificate so the Bluetooth permission survives rebuilds.
@@ -39,13 +41,18 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
 
 ## Presentation
 
-- The menu bar shows two percentages, left then right, for example `86% 39%`, with no `L` or `R` labels.
-- A disconnected part shows a dash in its place.
+- The menu bar shows the split ring, then two percentages, left then right, for example `86% 39%`, with no `L` or `R` labels.
+- The split ring is the app's mark: a circle cut into a left and a right half, each filled from the bottom up with that half's battery.
+  The same drawing is used in the menu bar, in the panel, and for the app icon.
+- A half at 20% or less is red.
+  Otherwise the item is a template image, so it follows the menu bar's text color.
+- A disconnected part shows a dash in its place and a dotted half in the ring.
+- A compact mode shows only the ring, without percentages.
 - When no keyboard is connected, the menu bar item is hidden.
   Opening the app again (from Finder or Spotlight) opens Settings, so the app is never unreachable.
 - Clicking the item opens a small panel (not a plain menu) with per-part detail, leaving room for future features such as the layer display.
 - Settings live in a standard macOS Settings window opened from the panel.
-  v1 settings: swap sides, launch at login, keyboard picker.
+  v1 settings: swap sides, launch at login, keyboard picker, compact menu bar.
 
 ## Left and right
 

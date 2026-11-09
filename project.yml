@@ -44,4 +44,5 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.markandersontrocme.halfsies
         PRODUCT_NAME: Halfsies
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO

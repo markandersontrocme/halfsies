@@ -20,6 +20,7 @@ public final class BatterySettings {
     private enum Key {
         static let swapSides = "battery.swapSides"
         static let preferredKeyboard = "battery.preferredKeyboard"
+        static let compactMenuBar = "battery.compactMenuBar"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -27,6 +28,11 @@ public final class BatterySettings {
     /// Show the central half on the right instead of the left.
     public var swapSides: Bool {
         didSet { defaults.set(swapSides, forKey: Key.swapSides) }
+    }
+
+    /// Show only the split ring in the menu bar, without percentages.
+    public var compactMenuBar: Bool {
+        didSet { defaults.set(compactMenuBar, forKey: Key.compactMenuBar) }
     }
 
     /// The keyboard to show; nil picks one automatically.
@@ -40,6 +46,7 @@ public final class BatterySettings {
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         swapSides = defaults.bool(forKey: Key.swapSides)
+        compactMenuBar = defaults.bool(forKey: Key.compactMenuBar)
         preferredKeyboard = defaults.data(forKey: Key.preferredKeyboard)
             .flatMap { try? JSONDecoder().decode(KeyboardReference.self, from: $0) }
     }
