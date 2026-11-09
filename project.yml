@@ -1,0 +1,47 @@
+# XcodeGen spec. Run `xcodegen generate` to create Halfsies.xcodeproj (not committed).
+name: Halfsies
+options:
+  bundleIdPrefix: com.markandersontrocme
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+packages:
+  HalfsiesKit:
+    path: HalfsiesKit
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+targets:
+  Halfsies:
+    type: application
+    platform: macOS
+    sources:
+      - App
+    dependencies:
+      - package: HalfsiesKit
+        product: HalfsiesBLE
+      - package: HalfsiesKit
+        product: HalfsiesBattery
+      - package: HalfsiesKit
+        product: HalfsiesUI
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Halfsies
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.utilities
+        LSUIElement: true
+        NSBluetoothAlwaysUsageDescription: Halfsies reads the battery level of each half of your keyboard.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.markandersontrocme.halfsies
+        PRODUCT_NAME: Halfsies
+        GENERATE_INFOPLIST_FILE: NO
