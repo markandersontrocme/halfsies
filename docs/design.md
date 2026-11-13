@@ -34,7 +34,8 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
 
 - Beta builds are GitHub prereleases with the app zipped by `ditto`.
   There is no DMG, Homebrew cask, or in-app updater.
-- Pushing a `v1.2.3` tag runs CI, which tests the package, builds the Release configuration, and publishes `Halfsies-1.2.3.zip`.
+- A release starts either from pushing a `v1.2.3` tag or from running the CI workflow by hand on `main` with tag `v1.2.3`, which creates the tag.
+  Either way CI tests the package, builds the Release configuration, and publishes `Halfsies-1.2.3.zip`.
   The tag sets the marketing version, and the CI run number sets the build number.
 - `scripts/package.sh` builds and zips the app.
   It builds from the committed files only, so a developer's gitignored `Config/Local.xcconfig` cannot change a release build.
