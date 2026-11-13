@@ -53,6 +53,12 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
   - Presentation Format (0x2904) description `0x0106` ("main") is the central half.
   - Presentation Format description `0x0108` ("auxiliary") with User Description (0x2901) `Peripheral N` is peripheral N.
 - Subscribe to Battery Level notifications and re-read every 60 seconds as a safety net.
+- Look for newly connected keyboards every 10 seconds, because CoreBluetooth on macOS has no callback for that.
+- If a read fails before a keyboard is fully read, drop it and let a later discovery pass attach again.
+  Dropping ends only the app's own connection; macOS keeps the keyboard connected.
+- A failed re-read keeps the last level.
+  After 3 failed re-reads in a row, the keyboard is dropped the same way.
+- A keyboard that keeps failing waits 10 seconds before the next attach, doubling after each failure up to 5 minutes.
 - A level of 0% means the part is disconnected or asleep, and is shown as a dash, never as 0%.
 
 ## Presentation
