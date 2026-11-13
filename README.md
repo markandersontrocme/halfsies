@@ -30,6 +30,19 @@ CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_PROXY=y
 See the [ZMK battery configuration](https://zmk.dev/docs/config/battery) docs for details.
 macOS caches the keyboard's Bluetooth services, so if the second half still does not show up after flashing, remove the keyboard in System Settings > Bluetooth and pair it again.
 
+## Troubleshooting
+
+If nothing shows in the menu bar, open Halfsies again from Finder or Spotlight.
+The top of its Settings window says what is wrong:
+
+- **Waiting for Bluetooth permission**: allow Halfsies when macOS asks.
+- **Not allowed to use Bluetooth**: click Open Bluetooth Settings and turn on Halfsies in Privacy & Security > Bluetooth.
+- **Bluetooth is off**: turn Bluetooth on.
+- **No keyboard connected**: connect the keyboard in System Settings > Bluetooth.
+- **Reports only one battery**: the firmware does not report the other half; see [Firmware setting](#firmware-setting), including the re-pair step.
+
+Builds you make yourself are ad-hoc signed, so macOS may ask for Bluetooth permission again after each rebuild; see [Building](#building).
+
 ## Building
 
 You need Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).

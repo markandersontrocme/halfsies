@@ -20,6 +20,7 @@ let package = Package(
         // SwiftUI views for the menu bar panel and settings.
         .target(name: "HalfsiesUI", dependencies: ["HalfsiesBattery"]),
         .testTarget(name: "HalfsiesCoreTests", dependencies: ["HalfsiesCore"]),
+        .testTarget(name: "HalfsiesBLETests", dependencies: ["HalfsiesBLE"]),
         .testTarget(name: "HalfsiesBatteryTests", dependencies: ["HalfsiesBattery"]),
     ]
 )

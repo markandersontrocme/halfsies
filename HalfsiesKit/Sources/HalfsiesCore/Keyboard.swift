@@ -65,11 +65,3 @@ public struct Keyboard: Hashable, Sendable, Identifiable {
             .min { ($0.name, $0.id.rawValue) < ($1.name, $1.id.rawValue) }
     }
 }
-
-/// Produces snapshots of every connected keyboard whenever anything changes.
-@MainActor
-public protocol KeyboardTransport: AnyObject {
-    /// Starts the transport and yields the full set of connected keyboards on each change.
-    /// Call once; the stream has a single consumer.
-    func keyboards() -> AsyncStream<[Keyboard]>
-}

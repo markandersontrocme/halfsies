@@ -21,6 +21,8 @@ public final class BatteryMonitor {
     public let settings: BatterySettings
     /// Every connected keyboard that reports a battery.
     public private(set) var keyboards: [Keyboard] = []
+    /// Whether the transport can reach keyboards. Until it says otherwise, the app waits for permission.
+    public private(set) var bluetooth: BluetoothAvailability = .waitingForPermission
 
     @ObservationIgnored private let transport: any KeyboardTransport
 
@@ -31,8 +33,9 @@ public final class BatteryMonitor {
 
     /// Consumes transport updates until the stream ends. Call once.
     public func run() async {
-        for await keyboards in transport.keyboards() {
-            self.keyboards = keyboards
+        for await snapshot in transport.snapshots() {
+            bluetooth = snapshot.bluetooth
+            keyboards = snapshot.keyboards
         }
     }
 
@@ -49,6 +52,13 @@ public final class BatteryMonitor {
     /// Menu bar text such as "86% 39%", or nil when the menu bar item should be hidden.
     public var menuBarText: String? {
         split?.menuBarText
+    }
+
+    /// Why the menu bar does or does not show a keyboard, for Settings.
+    public var status: SetupStatus {
+        SetupStatus(
+            bluetooth: bluetooth, keyboards: keyboards, selected: selectedKeyboard,
+            preferred: settings.preferredKeyboard)
     }
 
     /// Keyboards for the picker: connected ones by name, plus the preferred one if it is disconnected.

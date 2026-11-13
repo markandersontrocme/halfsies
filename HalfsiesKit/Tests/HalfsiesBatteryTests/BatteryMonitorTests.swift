@@ -5,10 +5,14 @@ import Testing
 
 @MainActor
 final class FakeTransport: KeyboardTransport {
-    let updates: [[Keyboard]]
-    init(_ updates: [[Keyboard]]) { self.updates = updates }
+    let updates: [TransportSnapshot]
+    init(_ updates: [TransportSnapshot]) { self.updates = updates }
+    /// Keyboard updates with Bluetooth ready.
+    convenience init(_ updates: [[Keyboard]]) {
+        self.init(updates.map { TransportSnapshot(bluetooth: .ready, keyboards: $0) })
+    }
 
-    func keyboards() -> AsyncStream<[Keyboard]> {
+    func snapshots() -> AsyncStream<TransportSnapshot> {
         AsyncStream { continuation in
             for update in updates { continuation.yield(update) }
             continuation.finish()
@@ -26,6 +30,12 @@ func split(_ name: String, left: UInt8, right: UInt8) -> Keyboard {
             .init(level: left, presentationFormat: mainFormat, userDescription: nil),
             .init(level: right, presentationFormat: auxiliaryFormat, userDescription: "Peripheral 0"),
         ])
+}
+
+func single(_ name: String, level: UInt8) -> Keyboard {
+    Keyboard(
+        id: KeyboardID(rawValue: name), name: name,
+        readings: [.init(level: level, presentationFormat: mainFormat, userDescription: nil)])
 }
 
 func freshDefaults() -> UserDefaults {
@@ -110,5 +120,57 @@ struct BatterySettingsTests {
 
         second.preferredKeyboard = nil
         #expect(BatterySettings(defaults: defaults).preferredKeyboard == nil)
+    }
+}
+
+@MainActor
+@Suite("SetupStatus")
+struct SetupStatusTests {
+    func status(_ bluetooth: BluetoothAvailability, _ keyboards: [Keyboard], preferred: String? = nil) async
+        -> SetupStatus
+    {
+        let settings = BatterySettings(defaults: freshDefaults())
+        settings.preferredKeyboard = preferred.map { KeyboardReference(id: KeyboardID(rawValue: $0), name: $0) }
+        let transport = FakeTransport([TransportSnapshot(bluetooth: bluetooth, keyboards: keyboards)])
+        let monitor = BatteryMonitor(transport: transport, settings: settings)
+        await monitor.run()
+        return monitor.status
+    }
+
+    @Test func waitsForPermissionBeforeTheTransportReports() {
+        let transport = FakeTransport([TransportSnapshot]())
+        let monitor = BatteryMonitor(transport: transport, settings: BatterySettings(defaults: freshDefaults()))
+        #expect(monitor.status == .waitingForPermission)
+    }
+
+    @Test func bluetoothProblemsComeFirst() async {
+        #expect(await status(.waitingForPermission, []) == .waitingForPermission)
+        #expect(await status(.denied, []) == .permissionDenied)
+        #expect(await status(.poweredOff, []) == .bluetoothOff)
+        #expect(await status(.unsupported, []) == .bluetoothUnsupported)
+    }
+
+    @Test func readyWithoutKeyboards() async {
+        #expect(await status(.ready, []) == .noKeyboard)
+    }
+
+    @Test func showsTheSelectedSplit() async {
+        #expect(await status(.ready, [split("Forager", left: 86, right: 39)]) == .showing(name: "Forager"))
+    }
+
+    @Test func explainsAKeyboardWithOneBattery() async {
+        #expect(await status(.ready, [single("Forager", level: 86)]) == .singleBattery(name: "Forager"))
+        #expect(
+            await status(.ready, [single("Forager", level: 86)], preferred: "Forager") == .singleBattery(name: "Forager"))
+    }
+
+    @Test func aSplitWinsOverAOneBatteryDevice() async {
+        let keyboards = [single("Mouse", level: 50), split("Forager", left: 86, right: 39)]
+        #expect(await status(.ready, keyboards) == .showing(name: "Forager"))
+    }
+
+    @Test func namesAPickedKeyboardThatIsNotConnected() async {
+        let corne = split("Corne", left: 10, right: 20)
+        #expect(await status(.ready, [corne], preferred: "Forager") == .notConnected(name: "Forager"))
     }
 }
