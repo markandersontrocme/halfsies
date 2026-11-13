@@ -1,6 +1,7 @@
 import AppKit
 import HalfsiesBLE
 import HalfsiesBattery
+import HalfsiesCore
 import HalfsiesUI
 import SwiftUI
 
@@ -15,6 +16,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         menuBar = MenuBarController(monitor: monitor, openSettings: showSettings, quit: { NSApp.terminate(nil) })
         Task { await monitor.run() }
+        // A new user sees nothing in the menu bar until Bluetooth and the keyboard work, so explain it once.
+        // Later launches, including launch at login, stay quiet.
+        if LaunchHistory.recordLaunch(in: .standard, launchAtLoginEnabled: loginItem.isEnabled) {
+            showSettings()
+        }
     }
 
     /// The menu bar item is hidden while no keyboard is connected, so opening the app again shows Settings.
@@ -48,6 +54,14 @@ private struct SettingsHost: View {
         SettingsView(
             monitor: monitor,
             launchAtLogin: Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) }),
-            launchAtLoginNote: loginItem.note)
+            launchAtLoginNote: loginItem.note,
+            version: Self.version)
+    }
+
+    private static var version: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let short = info["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info["CFBundleVersion"] as? String ?? "?"
+        return "\(short) (\(build))"
     }
 }

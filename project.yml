@@ -26,6 +26,8 @@ targets:
       - App
     dependencies:
       - package: HalfsiesKit
+        product: HalfsiesCore
+      - package: HalfsiesKit
         product: HalfsiesBLE
       - package: HalfsiesKit
         product: HalfsiesBattery

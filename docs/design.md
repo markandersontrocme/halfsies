@@ -6,8 +6,10 @@ The research behind them is in [research/](research/README.md).
 
 ## Audience
 
-Built for the owner first, with other ZMK users in mind later.
-The code and data model should not assume a single user, but v1 builds no onboarding.
+Built for the owner and for other ZMK split users.
+The code and data model should not assume a single user.
+A new user sees nothing in the menu bar until Bluetooth access, Bluetooth itself, and the firmware are right, so Settings explains what is missing.
+There is no welcome window or setup wizard.
 
 ## v1 scope
 
@@ -54,6 +56,8 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
   - Presentation Format description `0x0108` ("auxiliary") with User Description (0x2901) `Peripheral N` is peripheral N.
 - Subscribe to Battery Level notifications and re-read every 60 seconds as a safety net.
 - Look for newly connected keyboards every 10 seconds, because CoreBluetooth on macOS has no callback for that.
+- The transport publishes Bluetooth availability alongside the keyboards, so the UI can explain an empty menu bar without importing CoreBluetooth.
+  Until the first state update arrives, the app is waiting for the user to answer the permission prompt, not failing.
 - If a read fails before a keyboard is fully read, drop it and let a later discovery pass attach again.
   Dropping ends only the app's own connection; macOS keeps the keyboard connected.
 - A failed re-read keeps the last level.
@@ -72,9 +76,14 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
 - A compact mode shows only the ring, without percentages.
 - When no keyboard is connected, the menu bar item is hidden.
   Opening the app again (from Finder or Spotlight) opens Settings, so the app is never unreachable.
+- Settings opens by itself on the first launch only.
+  Later launches, including launch at login, stay quiet.
 - Clicking the item opens a small panel (not a plain menu) with per-part detail, leaving room for future features such as the layer display.
 - Settings live in a standard macOS Settings window opened from the panel.
   v1 settings: swap sides, launch at login, keyboard picker, compact menu bar.
+- The top of Settings shows one setup status line, with an action where one exists:
+  waiting for Bluetooth permission, permission denied (with a button to the Bluetooth privacy pane), Bluetooth off, Bluetooth unsupported, no keyboard connected, the picked keyboard not connected, a keyboard that reports only one battery (with firmware guidance), or the keyboard being shown.
+- The bottom of Settings shows the app version and a link to the README troubleshooting section.
 
 ## Left and right
 
@@ -89,7 +98,8 @@ Deferred to later versions: low-battery alerts, showing several keyboards at onc
 ## Firmware prerequisites
 
 - The central half must be built with `CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING=y` and `CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_PROXY=y`.
-- The README documents this; the app does not show in-app guidance.
+- The README documents this.
+  When a keyboard reports only one battery, Settings names the two settings, mentions re-pairing, and links the README section.
 - Future features may require adding community ZMK modules to the firmware, which is acceptable.
 
 ## Extensibility

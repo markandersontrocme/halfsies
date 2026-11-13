@@ -25,8 +25,8 @@ public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
 
     private var central: CBCentralManager?
     private var sessions: [UUID: Session] = [:]
-    private var continuation: AsyncStream<[Keyboard]>.Continuation?
-    private var lastPublished: [Keyboard]?
+    private var continuation: AsyncStream<TransportSnapshot>.Continuation?
+    private var lastPublished: TransportSnapshot?
     private var timers: [Task<Void, Never>] = []
     private var backoff = AttachBackoff()
 
@@ -39,10 +39,12 @@ public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
         self.refreshInterval = refreshInterval
     }
 
-    public func keyboards() -> AsyncStream<[Keyboard]> {
-        let (stream, continuation) = AsyncStream.makeStream(of: [Keyboard].self, bufferingPolicy: .bufferingNewest(1))
+    public func snapshots() -> AsyncStream<TransportSnapshot> {
+        let (stream, continuation) = AsyncStream.makeStream(
+            of: TransportSnapshot.self, bufferingPolicy: .bufferingNewest(1))
         self.continuation = continuation
         central = CBCentralManager(delegate: self, queue: .main)
+        publish()
         timers = [
             repeating(every: discoveryInterval) { $0.discoverConnectedKeyboards() },
             repeating(every: refreshInterval) { $0.refreshLevels() },
@@ -118,10 +120,19 @@ public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
             backoff.recordSuccess(keyboard.id)
         }
         keyboards.sort { $0.id.rawValue < $1.id.rawValue }
-        guard keyboards != lastPublished else { return }
-        lastPublished = keyboards
-        log.info("Publishing \(keyboards.count) keyboard(s): \(keyboards.map { "\($0.name) \($0.parts)" }, privacy: .public)")
-        continuation?.yield(keyboards)
+        let snapshot = TransportSnapshot(bluetooth: availability, keyboards: keyboards)
+        guard snapshot != lastPublished else { return }
+        lastPublished = snapshot
+        log.info(
+            "Publishing \(String(describing: snapshot.bluetooth), privacy: .public), \(keyboards.count) keyboard(s): \(keyboards.map { "\($0.name) \($0.parts)" }, privacy: .public)"
+        )
+        continuation?.yield(snapshot)
+    }
+
+    /// Before the first state update the manager reports `.unknown`, which maps to waiting for permission.
+    private var availability: BluetoothAvailability {
+        guard let central else { return .waitingForPermission }
+        return BluetoothAvailability(state: central.state, authorization: CBManager.authorization)
     }
 
     private func session(for peripheral: CBPeripheral) -> Session? {
@@ -138,8 +149,8 @@ extension BLEKeyboardTransport: @MainActor CBCentralManagerDelegate {
             discoverConnectedKeyboards()
         } else {
             sessions = [:]
-            publish()
         }
+        publish()
     }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -260,6 +271,35 @@ extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
 
     public func peripheralDidUpdateName(_ peripheral: CBPeripheral) {
         publish()
+    }
+}
+
+// MARK: - Availability
+
+extension BluetoothAvailability {
+    /// Maps CoreBluetooth's state and the app's authorization. A denied or unanswered permission wins over the state.
+    init(state: CBManagerState, authorization: CBManagerAuthorization) {
+        switch authorization {
+        case .denied, .restricted:
+            self = .denied
+            return
+        case .notDetermined:
+            self = .waitingForPermission
+            return
+        case .allowedAlways:
+            break
+        @unknown default:
+            break
+        }
+        switch state {
+        case .poweredOn: self = .ready
+        case .poweredOff: self = .poweredOff
+        case .unsupported: self = .unsupported
+        case .unauthorized: self = .denied
+        // No update yet, or a brief reset that is followed by a real state.
+        case .unknown, .resetting: self = .waitingForPermission
+        @unknown default: self = .waitingForPermission
+        }
     }
 }
 
