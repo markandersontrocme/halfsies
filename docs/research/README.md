@@ -88,8 +88,8 @@ Recorded 2026-11-09.
 
 - **No Apple Developer Program.**
   No Developer ID signing, notarization, or Mac App Store.
-  Local builds are signed with a free Apple ID "Personal Team" development certificate so the Bluetooth permission survives rebuilds.
-  Release downloads, if any, are unsigned or ad-hoc signed and need "Open Anyway" in System Settings.
+  Local builds are ad-hoc signed by default; a free Apple ID "Personal Team" certificate is optional so the Bluetooth permission survives rebuilds.
+  Release downloads are ad-hoc signed and need "Open Anyway" in System Settings.
   Sparkle and the Homebrew tap are deferred until distribution matters.
 - **Deployment target:** the current macOS only (26 and later), no back-compat work.
 - **Sandbox:** off. Plain unsandboxed app, which is the easiest path.
