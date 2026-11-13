@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <!-- GitHub social preview. Render it to PNG with render-social-preview.sh. -->
+  <rect width="1280" height="640" fill="#16151F"/>
+  <image href="logo.svg" x="157" y="180" width="280" height="280"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+    <text x="493" y="318" fill="#FFF" font-size="112" font-weight="700" letter-spacing="-2">Halfsies</text>
+    <text x="493" y="384" fill="#C9C8E8" font-size="38">Both halves of your ZMK split keyboard</text>
+  </g>
+</svg>

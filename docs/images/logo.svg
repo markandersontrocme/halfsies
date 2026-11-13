@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="824" height="824" viewBox="100 100 824 824">
+  <!-- Flat export of App/AppIcon.icon (same ring paths, without the system glass effect). -->
+  <defs>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7D7BF0"/>
+      <stop offset="1" stop-color="#4B49C9"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#fill)"/>
+  <g fill="#FFF" opacity="0.25">
+    <path d="M425.69 818.06A318.0 318.0 0 0 1 425.69 205.94A38.0 38.0 0 0 1 446.31 279.09A242.0 242.0 0 0 0 446.31 744.91A38.0 38.0 0 0 1 425.69 818.06Z"/>
+    <path d="M598.31 205.94A318.0 318.0 0 0 1 598.31 818.06A38.0 38.0 0 0 1 577.69 744.91A242.0 242.0 0 0 0 577.69 279.09A38.0 38.0 0 0 1 598.31 205.94Z"/>
+  </g>
+  <g fill="#FFF">
+    <path d="M425.69 818.06A318.0 318.0 0 0 1 316.11 261.50A38.0 38.0 0 0 1 362.93 321.37A242.0 242.0 0 0 0 446.31 744.91A38.0 38.0 0 0 1 425.69 818.06Z"/>
+    <path d="M827.33 470.91A318.0 318.0 0 0 1 598.31 818.06A38.0 38.0 0 0 1 577.69 744.91A242.0 242.0 0 0 0 751.97 480.73A38.0 38.0 0 0 1 827.33 470.91Z"/>
+  </g>
+</svg>
