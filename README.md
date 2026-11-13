@@ -1,3 +1,5 @@
+<img src="docs/images/logo.svg" width="96" alt="Halfsies app icon">
+
 # Halfsies
 
 Split keyboard in your Mac menu bar.
