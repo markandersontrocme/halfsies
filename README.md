@@ -2,83 +2,89 @@
 
 # Halfsies
 
-Split keyboard in your Mac menu bar.
+See the battery of both halves of your ZMK split keyboard in the Mac menu bar.
 
-macOS shows only one battery level for a Bluetooth keyboard, which for a ZMK split is the half your Mac connects to.
-Halfsies shows both halves, left then right, as a split ring followed by the percentages, for example `86% 39%`.
-Each side of the ring fills from the bottom with that half's battery and turns red at 20% or less.
-A half that is asleep or out of range shows `-` and a dotted side.
-Turn on Compact menu bar in Settings to show only the ring; click it to see the percentages.
-The menu bar item disappears while no keyboard is connected; open Halfsies again to reach its settings.
+macOS shows only one battery level for a Bluetooth keyboard: the half your Mac connects to.
+Halfsies shows both, left then right, for example `86% 39%`.
+
+- Each side of the ring fills with that half's battery and turns red at 20% or less.
+- A half that is asleep or out of range shows `-`.
+- Click the ring to see both halves in more detail.
 
 ## Requirements
 
-- macOS 26 or later.
-- A ZMK split keyboard connected to the Mac over Bluetooth.
-- Firmware that reports the other half's battery to the Mac (see below).
+- A Mac with Apple silicon, running macOS 26 or later.
+- A ZMK split keyboard connected over Bluetooth.
+- Two lines in your keyboard's firmware (see [Firmware setting](#firmware-setting)).
 
-### Firmware setting
+## Install
 
-By default ZMK reports only the central half's battery to the host.
-Add these lines to your keyboard's `.conf` file (for the central half, usually the left one), rebuild, and flash the central half:
+1. Download the latest `Halfsies-x.y.z.zip` from [Releases](https://github.com/markandersontrocme/halfsies/releases).
+2. Open the zip and drag Halfsies to your Applications folder.
+3. Open Halfsies.
+   macOS says it cannot verify the app, because Halfsies is not notarized by Apple.
+   Click Done.
+4. Open System Settings > Privacy & Security, scroll down to "Halfsies was blocked", and click Open Anyway.
+5. Allow Bluetooth access when asked.
+
+Settings opens on the first launch and tells you if anything is missing.
+
+## Firmware setting
+
+By default ZMK sends only the central half's battery to your Mac.
+Add these lines to your keyboard's `.conf` file, rebuild, and flash the central half (usually the left one):
 
 ```ini
 CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING=y
 CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_PROXY=y
 ```
 
-See the [ZMK battery configuration](https://zmk.dev/docs/config/battery) docs for details.
-macOS caches the keyboard's Bluetooth services, so if the second half still does not show up after flashing, remove the keyboard in System Settings > Bluetooth and pair it again.
+If the second half still does not show up, remove the keyboard in System Settings > Bluetooth and pair it again.
+macOS remembers the keyboard's old Bluetooth layout until you do.
+
+Known ZMK bug: with these settings, the central half writes past the end of an array each time it disconnects from your Mac ([zmk#3522](https://github.com/zmkfirmware/zmk/issues/3522)).
+On at least one board this stalled Bluetooth.
+A fix is under review in [zmk#3556](https://github.com/zmkfirmware/zmk/pull/3556).
+
+## Settings
+
+Click the ring, then Settings, to:
+
+- Swap left and right, if the half your Mac connects to is on the right.
+- Show only the ring (Compact menu bar).
+- Launch Halfsies at login.
+- Pick a keyboard, if you have more than one.
 
 ## Troubleshooting
 
-If nothing shows in the menu bar, open Halfsies again from Finder or Spotlight.
+If nothing shows in the menu bar, open Halfsies again from Applications or Spotlight.
 The top of its Settings window says what is wrong:
 
 - **Waiting for Bluetooth permission**: allow Halfsies when macOS asks.
-- **Not allowed to use Bluetooth**: click Open Bluetooth Settings and turn on Halfsies in Privacy & Security > Bluetooth.
+- **Not allowed to use Bluetooth**: click Open Bluetooth Settings and turn on Halfsies.
 - **Bluetooth is off**: turn Bluetooth on.
 - **No keyboard connected**: connect the keyboard in System Settings > Bluetooth.
-- **Reports only one battery**: the firmware does not report the other half; see [Firmware setting](#firmware-setting), including the re-pair step.
+- **Reports only one battery**: add the [firmware setting](#firmware-setting), then pair the keyboard again.
 
-Builds you make yourself are ad-hoc signed, so macOS may ask for Bluetooth permission again after each rebuild; see [Building](#building).
+## Update
 
-## Building
+Download the new release, quit Halfsies, and replace the app in Applications.
+Your settings are kept.
+Because each release is a new download that Apple has not notarized, macOS asks you to click Open Anyway and allow Bluetooth again.
 
-You need Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+## Uninstall
 
-```sh
-xcodegen generate
-open Halfsies.xcodeproj
-```
+Turn off Launch at login in Settings, quit Halfsies, and move it from Applications to the Trash.
 
-Or from the command line:
+## Privacy
 
-```sh
-xcodegen generate
-xcodebuild -project Halfsies.xcodeproj -scheme Halfsies -derivedDataPath build/DerivedData build
-open build/DerivedData/Build/Products/Debug/Halfsies.app
-```
+Halfsies only reads battery levels from your keyboard over Bluetooth.
+It makes no network connections, and its settings stay on your Mac.
 
-Builds are ad-hoc signed by default, so macOS asks for Bluetooth permission again after each rebuild.
-To avoid that, see [Config/Signing.xcconfig](Config/Signing.xcconfig).
+## Feedback
 
-Run the logic tests without Xcode:
-
-```sh
-swift test --package-path HalfsiesKit
-```
-
-## Layout
-
-- `App/` is the thin app target: app entry point, Settings window, launch at login.
-- `HalfsiesKit/` is a Swift package with nearly all the code:
-  - `HalfsiesCore`: the keyboard model and pure logic, such as identifying each half from its Bluetooth descriptors.
-  - `HalfsiesBLE`: reads battery levels with CoreBluetooth; the only module that imports it.
-  - `HalfsiesBattery`: observable battery state and settings.
-  - `HalfsiesUI`: SwiftUI views.
-- `scripts/package.sh` builds the zipped, ad-hoc signed app that CI publishes for a version tag.
-- `docs/design.md` records the design decisions, and `docs/research/` the research behind them.
+Found a bug or have an idea? [Open an issue](https://github.com/markandersontrocme/halfsies/issues/new/choose).
+To build Halfsies yourself or contribute, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## License
 
