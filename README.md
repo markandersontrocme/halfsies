@@ -77,6 +77,7 @@ swift test --package-path HalfsiesKit
   - `HalfsiesBLE`: reads battery levels with CoreBluetooth; the only module that imports it.
   - `HalfsiesBattery`: observable battery state and settings.
   - `HalfsiesUI`: SwiftUI views.
+- `scripts/package.sh` builds the zipped, ad-hoc signed app that CI publishes for a version tag.
 - `docs/design.md` records the design decisions, and `docs/research/` the research behind them.
 
 ## License
