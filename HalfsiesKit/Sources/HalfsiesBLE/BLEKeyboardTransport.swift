@@ -10,6 +10,9 @@ private let log = Logger(subsystem: "com.markandersontrocme.halfsies", category:
 /// instance with the descriptors that name it, subscribes to notifications, and re-reads periodically
 /// as a safety net. Keyboards are published only once every battery and its descriptors have been read,
 /// so a part is never shown under the wrong role.
+///
+/// When a read fails before a keyboard is complete, or a known level fails to re-read several times in a row,
+/// the keyboard is dropped and the next discovery pass attaches again, spaced out by `AttachBackoff`.
 @MainActor
 public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
     private static let batteryService = CBUUID(string: "180F")
@@ -25,6 +28,7 @@ public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
     private var continuation: AsyncStream<[Keyboard]>.Continuation?
     private var lastPublished: [Keyboard]?
     private var timers: [Task<Void, Never>] = []
+    private var backoff = AttachBackoff()
 
     /// - Parameters:
     ///   - discoveryInterval: How often to look for keyboards the system has newly connected.
@@ -76,7 +80,7 @@ public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
     private func discoverConnectedKeyboards() {
         guard let central, central.state == .poweredOn else { return }
         for peripheral in central.retrieveConnectedPeripherals(withServices: [Self.batteryService])
-        where sessions[peripheral.identifier] == nil {
+        where sessions[peripheral.identifier] == nil && backoff.allowsAttach(peripheral.keyboardID, at: .now) {
             log.info("Attaching to \(peripheral.name ?? "?", privacy: .public) \(peripheral.identifier)")
             let session = Session(peripheral: peripheral)
             sessions[peripheral.identifier] = session
@@ -93,12 +97,27 @@ public final class BLEKeyboardTransport: NSObject, KeyboardTransport {
         }
     }
 
+    /// Forgets a keyboard whose reads failed, so a later discovery pass attaches to it again.
+    /// Cancelling only ends this app's connection; the system keeps the keyboard connected.
+    private func drop(_ peripheral: CBPeripheral, because reason: String) {
+        guard sessions[peripheral.identifier] != nil else { return }
+        log.error("Dropping \(peripheral.name ?? "?", privacy: .public) to attach again: \(reason, privacy: .public)")
+        sessions[peripheral.identifier] = nil
+        central?.cancelPeripheralConnection(peripheral)
+        backoff.recordFailure(peripheral.keyboardID, at: .now)
+        publish()
+    }
+
     // MARK: - Publishing
 
     private func publish() {
-        let keyboards = sessions.values
-            .compactMap(\.keyboard)
-            .sorted { $0.id.rawValue < $1.id.rawValue }
+        var keyboards: [Keyboard] = []
+        for session in sessions.values {
+            guard let keyboard = session.keyboard else { continue }
+            keyboards.append(keyboard)
+            backoff.recordSuccess(keyboard.id)
+        }
+        keyboards.sort { $0.id.rawValue < $1.id.rawValue }
         guard keyboards != lastPublished else { return }
         lastPublished = keyboards
         log.info("Publishing \(keyboards.count) keyboard(s): \(keyboards.map { "\($0.name) \($0.parts)" }, privacy: .public)")
@@ -142,9 +161,8 @@ extension BLEKeyboardTransport: @MainActor CBCentralManagerDelegate {
     public func centralManager(
         _ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?
     ) {
-        // Forget it; the next discovery pass picks it up again if the system still has it connected.
-        sessions[peripheral.identifier] = nil
-        publish()
+        // The next discovery pass picks it up again if the system still has it connected.
+        drop(peripheral, because: "connect failed: \(String(describing: error))")
     }
 }
 
@@ -153,7 +171,9 @@ extension BLEKeyboardTransport: @MainActor CBCentralManagerDelegate {
 extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
         guard let session = session(for: peripheral) else { return }
+        if let error { return drop(peripheral, because: "service discovery failed: \(error)") }
         let services = (peripheral.services ?? []).filter { $0.uuid == Self.batteryService }
+        guard !services.isEmpty else { return drop(peripheral, because: "no Battery Service found") }
         session.pendingServices = services.count
         for service in services {
             peripheral.discoverCharacteristics([Self.batteryLevel], for: service)
@@ -165,6 +185,7 @@ extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
         _ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: (any Error)?
     ) {
         guard let session = session(for: peripheral) else { return }
+        if let error { return drop(peripheral, because: "characteristic discovery failed: \(error)") }
         for characteristic in service.characteristics ?? [] where characteristic.uuid == Self.batteryLevel {
             session.track(characteristic)
             peripheral.readValue(for: characteristic)
@@ -174,6 +195,9 @@ extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
             }
         }
         session.pendingServices = max(0, (session.pendingServices ?? 1) - 1)
+        if session.pendingServices == 0 && session.characteristics.isEmpty {
+            return drop(peripheral, because: "no Battery Level characteristic found")
+        }
         publish()
     }
 
@@ -181,6 +205,7 @@ extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
         _ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: (any Error)?
     ) {
         guard let session = session(for: peripheral) else { return }
+        if let error { return drop(peripheral, because: "descriptor discovery failed: \(error)") }
         let naming = (characteristic.descriptors ?? []).filter {
             $0.uuid == Self.presentationFormat || $0.uuid == Self.userDescription
         }
@@ -191,13 +216,13 @@ extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: (any Error)?) {
         guard let session = session(for: peripheral), let characteristic = descriptor.characteristic else { return }
+        // A missing descriptor could put a part under the wrong role, so a failed read starts over.
+        if let error { return drop(peripheral, because: "descriptor read failed: \(error)") }
         session.update(characteristic) { state in
-            if error == nil {
-                switch descriptor.uuid {
-                case Self.presentationFormat: state.presentationFormat = descriptor.value as? Data
-                case Self.userDescription: state.userDescription = descriptor.value as? String
-                default: break
-                }
+            switch descriptor.uuid {
+            case Self.presentationFormat: state.presentationFormat = descriptor.value as? Data
+            case Self.userDescription: state.userDescription = descriptor.value as? String
+            default: break
             }
             state.pendingDescriptors = max(0, (state.pendingDescriptors ?? 1) - 1)
         }
@@ -207,10 +232,21 @@ extension BLEKeyboardTransport: @MainActor CBPeripheralDelegate {
     public func peripheral(
         _ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: (any Error)?
     ) {
-        guard error == nil, let session = session(for: peripheral), let byte = characteristic.value?.first else {
+        guard let session = session(for: peripheral) else { return }
+        guard error == nil, let byte = characteristic.value?.first else {
+            guard let failure = session.recordFailedRead(characteristic) else { return }
+            let reason = "battery read failed \(failure.consecutiveFailures) time(s): \(String(describing: error))"
+            if ReadRetry.shouldReattach(hasLevel: failure.hasLevel, consecutiveFailures: failure.consecutiveFailures) {
+                drop(peripheral, because: reason)
+            } else {
+                log.info("Keeping the last level of \(peripheral.name ?? "?", privacy: .public): \(reason, privacy: .public)")
+            }
             return
         }
-        session.update(characteristic) { $0.level = byte }
+        session.update(characteristic) {
+            $0.level = byte
+            $0.failedReads = 0
+        }
         publish()
     }
 
@@ -238,6 +274,8 @@ private final class Session {
         var userDescription: String?
         /// Nil until descriptor discovery finishes, then the number of naming descriptors still being read.
         var pendingDescriptors: Int?
+        /// Failed value reads in a row.
+        var failedReads = 0
 
         var reading: BatteryCharacteristicReading? {
             guard let level, pendingDescriptors == 0 else { return nil }
@@ -276,6 +314,15 @@ private final class Session {
         states[id] = state
     }
 
+    /// Counts a failed value read, or returns nil for a characteristic this session does not track.
+    func recordFailedRead(_ characteristic: CBCharacteristic) -> (hasLevel: Bool, consecutiveFailures: Int)? {
+        let id = ObjectIdentifier(characteristic)
+        guard var state = states[id] else { return nil }
+        state.failedReads += 1
+        states[id] = state
+        return (state.level != nil, state.failedReads)
+    }
+
     /// The keyboard snapshot, or nil while anything is still being read.
     var keyboard: Keyboard? {
         guard peripheral.state == .connected, pendingServices == 0, !characteristics.isEmpty else { return nil }
@@ -285,8 +332,14 @@ private final class Session {
             readings.append(reading)
         }
         return Keyboard(
-            id: KeyboardID(rawValue: peripheral.identifier.uuidString),
+            id: peripheral.keyboardID,
             name: peripheral.name ?? "Keyboard",
             readings: readings)
+    }
+}
+
+extension CBPeripheral {
+    fileprivate var keyboardID: KeyboardID {
+        KeyboardID(rawValue: identifier.uuidString)
     }
 }
