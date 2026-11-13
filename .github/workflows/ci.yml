@@ -4,17 +4,25 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: xcode-27
     timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Toolchain
         run: |
@@ -24,12 +32,79 @@ jobs:
       - name: Test package
         run: swift test --package-path HalfsiesKit
 
-      - name: Generate project
-        run: |
-          command -v xcodegen || brew install xcodegen
-          xcodegen generate
+      - name: Install XcodeGen
+        run: command -v xcodegen || brew install xcodegen
 
-      - name: Build app
+      # A v1.2.3 tag releases version 1.2.3; other builds are 0.0.0.
+      - name: Version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            version=${GITHUB_REF_NAME#v}
+          else
+            version=0.0.0
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ github.run_number }}
+        run: scripts/package.sh "$VERSION" "$BUILD"
+
+      - name: Upload app
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/package/Halfsies-${{ steps.version.outputs.version }}.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/package/release-notes.md
+          archive: false
+          if-no-files-found: error
+
+  # Runs on every build so pull requests check the downloaded files; only a v* tag publishes.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      ZIP: Halfsies-${{ needs.build.outputs.version }}.zip
+    steps:
+      - name: Download app
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.ZIP }}
+          path: dist
+          skip-decompress: true
+
+      - name: Download release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: release-notes.md
+          path: dist
+
+      - name: Check files
+        run: |
+          ls -l dist
+          unzip -l "dist/$ZIP" | grep -q ' Halfsies.app/Contents/MacOS/Halfsies$'
+          cat dist/release-notes.md
+
+      - name: Publish prerelease
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: >
-          xcodebuild -project Halfsies.xcodeproj -scheme Halfsies -configuration Release
-          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
+          gh release create "$GITHUB_REF_NAME" "dist/$ZIP"
+          --repo "$GITHUB_REPOSITORY"
+          --verify-tag
+          --prerelease
+          --title "Halfsies $VERSION"
+          --notes-file dist/release-notes.md
+          --generate-notes
